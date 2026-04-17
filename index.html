@@ -319,6 +319,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <div class="semana-display">
   <span class="semana-label-big" id="semanaLabelBig">—</span>
   <button class="btn-cal" onclick="openSemanaCal()">trocar semana</button>
+  <button class="btn-cal" id="btnDeletarSemana" style="color:var(--alert-noone);border-color:var(--alert-noone);display:none" onclick="confirmarDeletarSemana()">deletar semana</button>
 </div>
 
 <div class="stats">
@@ -419,6 +420,8 @@ window.addEventListener('beforeunload',e=>{
 function setSemana(s){
   semanaAtual=s;
   document.getElementById('semanaLabelBig').innerHTML=s?`<strong>${s}</strong>`:'<span style="color:var(--text-3)">escolha uma semana</span>';
+  const btn=document.getElementById('btnDeletarSemana');
+  if(btn) btn.style.display=s?'inline-block':'none';
 }
 
 function setSort(mode){
@@ -532,22 +535,31 @@ function closeConfirm(){document.getElementById('confirmOverlay').classList.remo
 
 async function confirmarNovaSemana(){
   if(!pendingNovaSemana) return;
-  const nova=pendingNovaSemana;  // Captura ANTES de fechar (closeConfirm zera pendingNovaSemana)
+  const nova=pendingNovaSemana;
   closeConfirm();
 
-  // Pega jobs da semana mais recente como base
+  // Ordena semanas existentes cronologicamente (mais recente primeiro)
+  const extrairData=s=>{
+    const m=s.match(/(\d{2})\/(\d{2})/);
+    return m?parseInt(m[2])*100+parseInt(m[1]):0;
+  };
+  const ordenadas=[...todasSemanas].sort((a,b)=>extrairData(b)-extrairData(a));
+  const dataNo=extrairData(nova);
+
+  // Pega a semana imediatamente anterior à nova (primeira com data menor)
+  const anterior=ordenadas.find(s=>extrairData(s)<dataNo) || ordenadas[0];
+
   let base=[];
-  if(todasSemanas.length>0){
+  if(anterior){
     try{
-      const res=await fetch(`${API}?semana=eq.${encodeURIComponent(todasSemanas[0])}&order=col.asc`,{headers:hdrs});
+      const res=await fetch(`${API}?semana=eq.${encodeURIComponent(anterior)}&order=col.asc`,{headers:hdrs});
       base=await res.json();
+      console.log('[confirmarNovaSemana] copiando de:',anterior,'jobs:',base.length);
     }catch(e){}
   }
 
-  // Copia com IDs novos e semana nova
   jobs=base.map(j=>({...j,id:uid(),semana:nova,prazo2:'',prazo2_label:''}));
   setSemana(nova);
-  // Adiciona nova semana à lista e atualiza pills imediatamente
   if(!todasSemanas.includes(nova)){
     todasSemanas=[nova,...todasSemanas];
   }
@@ -555,7 +567,7 @@ async function confirmarNovaSemana(){
   console.log('[confirmarNovaSemana] nova=',nova,'jobs criados=',jobs.length);
   render();
   markUnsaved();
-  toast(`Semana criada com ${jobs.length} jobs — salvamento automático em 3s`);
+  toast(`Semana criada com ${jobs.length} jobs de "${anterior}" — salvamento automático em 3s`);
 }
 
 // ── SUPABASE ──────────────────────────────────────────
@@ -679,7 +691,15 @@ async function salvarTudo(manual=false){
 function renderPills(semanas){
   const bar=document.getElementById('semanaPills');
   bar.innerHTML='<span class="semana-bar-label">histórico:</span>';
-  semanas.slice(0,10).forEach(s=>{
+  // Ordena por data extraída do nome "Semana DD/MM a DD/MM"
+  const ordenadas=[...semanas].sort((a,b)=>{
+    const extrair=s=>{
+      const m=s.match(/(\d{2})\/(\d{2})/);
+      return m?parseInt(m[2])*100+parseInt(m[1]):0;
+    };
+    return extrair(b)-extrair(a); // mais recente à esquerda
+  });
+  ordenadas.slice(0,10).forEach(s=>{
     const btn=document.createElement('button');
     btn.className='semana-pill'+(s===semanaAtual?' active':'');
     btn.textContent=s;
@@ -690,6 +710,27 @@ function renderPills(semanas){
     };
     bar.appendChild(btn);
   });
+}
+
+async function confirmarDeletarSemana(){
+  if(!semanaAtual) return;
+  const ok=confirm(`Deletar permanentemente "${semanaAtual}" e todos os seus jobs?\n\nEssa ação não pode ser desfeita.`);
+  if(!ok) return;
+  setSaveStatus('saving','deletando...');
+  try{
+    await fetch(`${API}?semana=eq.${encodeURIComponent(semanaAtual)}`,{method:'DELETE',headers:hdrs});
+    todasSemanas=todasSemanas.filter(s=>s!==semanaAtual);
+    toast(`Semana "${semanaAtual}" deletada`);
+    setSemana(null);
+    jobs=[];
+    render();
+    renderPills(todasSemanas);
+    hasUnsaved=false;
+    setSaveStatus('saved','semana deletada');
+  }catch(e){
+    toast('Erro ao deletar: '+e.message,'error');
+    setSaveStatus('error','erro ao deletar');
+  }
 }
 
 function render(){

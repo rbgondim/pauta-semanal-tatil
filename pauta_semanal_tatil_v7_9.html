@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pauta Semanal — BU Brasil · Tátil Design</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F3EF;--surface:#FFFFFF;--surface2:#EDEAE4;
+  --border:#D8D4CC;--border-strong:#B8B2A8;
+  --text:#1A1816;--text-2:#6B6560;--text-3:#9E9890;
+  --ativo-bg:#EEF0E8;--ativo-border:#B8C4A0;--ativo-text:#3A4A28;
+  --intense-bg:#F5EDD8;--intense-border:#D4B870;--intense-text:#5A3E10;
+  --rush-bg:#F5E4E0;--rush-border:#D4907C;--rush-text:#5A2010;
+  --idle-bg:#E4ECF5;--idle-border:#88AACC;--idle-text:#1A3A5A;
+  --freeze-bg:#EDE8F5;--freeze-border:#A898CC;--freeze-text:#3A2860;
+  --alert-noone:#D4240C;--alert-urgent:#CC7800;
+  --bu-bianca-bg:#E8F5EE;--bu-bianca-text:#1A5A38;
+  --bu-mari-bg:#F5E8F0;--bu-mari-text:#5A1A40;
+  --bu-paula-bg:#F5EDE0;--bu-paula-text:#5A3A10;
+  --bu-vanessa-bg:#EDE8F5;--bu-vanessa-text:#3A1A60;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;background:var(--text);color:var(--bg);opacity:0;transition:opacity .2s;pointer-events:none;z-index:400}
+.toast.show{opacity:1}.toast.error{background:var(--alert-noone)}
+
+.header{padding:20px 28px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.header-eyebrow{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.header-title{font-size:22px;font-weight:300;letter-spacing:-.02em}
+.header-title strong{font-weight:500}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.btn-sm{padding:5px 14px;font-size:12px;border-radius:6px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-2);transition:all .1s}
+.btn-sm:hover{background:var(--surface2)}
+.btn-sm:disabled{opacity:.4;cursor:not-allowed}
+.btn-sm.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn-sm.primary:hover{opacity:.85}
+
+/* AUTOSAVE STATUS */
+.save-indicator{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);padding:4px 10px;border-radius:6px;border:1px solid transparent;transition:all .2s}
+.save-indicator.saving{color:var(--text-2);border-color:var(--border)}
+.save-indicator.saved{color:#3A4A28;background:var(--ativo-bg);border-color:var(--ativo-border)}
+.save-indicator.unsaved{color:var(--alert-urgent);border-color:var(--alert-urgent);background:#fff8ef}
+.save-indicator.error{color:var(--alert-noone);border-color:var(--alert-noone);background:#fff0ee}
+.save-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.save-dot.pulse{animation:savepulse 1s infinite}
+@keyframes savepulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.semana-display{display:flex;align-items:center;gap:8px;padding:12px 28px 0}
+.semana-label-big{font-family:'DM Mono',monospace;font-size:13px;color:var(--text-2)}
+.semana-label-big strong{color:var(--text);font-weight:500}
+.btn-cal{padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer;font-family:'DM Mono',monospace}
+.btn-cal:hover{background:var(--surface2)}
+
+/* CALENDAR */
+.cal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(26,24,22,.45);align-items:center;justify-content:center}
+.cal-overlay.open{display:flex}
+.cal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;width:320px;max-width:95vw}
+.cal-title-bar{font-size:12px;font-family:'DM Mono',monospace;color:var(--text-3);margin-bottom:10px;text-align:center;text-transform:uppercase;letter-spacing:.06em}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav-title{font-size:14px;font-weight:500;font-family:'DM Mono',monospace}
+.cal-nav-btn{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-2);padding:2px 8px;border-radius:5px}
+.cal-nav-btn:hover{background:var(--surface2)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-day-head{font-size:10px;font-family:'DM Mono',monospace;color:var(--text-3);padding:4px 0;text-transform:uppercase}
+.cal-day{font-size:12px;padding:6px 2px;border-radius:5px;cursor:default;color:var(--text-3)}
+.cal-day.other-month{opacity:.25}
+.cal-day.selectable{cursor:pointer;color:var(--text);background:var(--surface2)}
+.cal-day.selectable:hover{background:var(--ativo-bg);color:var(--ativo-text)}
+.cal-day.selected{background:var(--text);color:var(--bg)}
+.cal-day.today-mark{outline:1px solid var(--border-strong)}
+.cal-foot{display:flex;gap:8px;margin-top:12px}
+.cal-foot button{flex:1;padding:7px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif}
+.cal-foot button:hover{background:var(--surface2)}
+.cal-foot .cal-clear{color:var(--alert-noone);border-color:var(--alert-noone)}
+.cal-foot .cal-clear:hover{background:#fff0ee}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:14px 28px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.stat-n{font-size:28px;font-weight:300;letter-spacing:-.03em;line-height:1}
+.stat-l{font-size:11px;color:var(--text-3);margin-top:4px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+
+.semana-bar{padding:0 28px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.semana-bar-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);margin-right:2px}
+.semana-pill{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;font-family:'DM Mono',monospace;transition:all .1s}
+.semana-pill:hover{background:var(--surface2)}
+.semana-pill.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+.filter-bar{padding:0 28px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.filter-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);margin-right:4px}
+.fbtn{font-size:12px;font-family:'DM Sans',sans-serif;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;transition:all .1s}
+.fbtn:hover{background:var(--surface2)}
+.fbtn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.fbtn.alert-active{background:var(--alert-noone);color:#fff;border-color:var(--alert-noone)}
+
+.legend{padding:0 28px 12px;display:flex;gap:16px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace}
+.leg-line{width:14px;height:2px;border-radius:2px}
+
+.board-wrap{padding:0 28px 28px;overflow-x:auto}
+.board-add-bar{display:grid;grid-template-columns:repeat(5,minmax(180px,1fr));gap:10px;min-width:900px;margin-bottom:6px}
+.board-add-btn{padding:5px 8px;font-size:11px;font-family:'DM Mono',monospace;border:1px dashed var(--border);border-radius:7px;background:transparent;color:var(--text-3);cursor:pointer;transition:all .1s;text-align:left;letter-spacing:.03em}
+.board-add-btn:hover{background:var(--surface2);color:var(--text-2);border-color:var(--border-strong)}
+.board{display:grid;grid-template-columns:repeat(5,minmax(180px,1fr));gap:10px;min-width:900px}
+.col{display:flex;flex-direction:column}
+.col-header{border-radius:10px 10px 0 0;padding:10px 12px}
+.col-emoji{font-size:16px;margin-bottom:3px;display:block}
+.col-header-label{font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.07em}
+.col-header-sub{font-size:11px;margin-top:2px;opacity:.65;font-family:'DM Mono',monospace}
+.col-ativo .col-header{background:var(--ativo-bg);color:var(--ativo-text);border:1px solid var(--ativo-border);border-bottom:none}
+.col-intense .col-header{background:var(--intense-bg);color:var(--intense-text);border:1px solid var(--intense-border);border-bottom:none}
+.col-rush .col-header{background:var(--rush-bg);color:var(--rush-text);border:1px solid var(--rush-border);border-bottom:none}
+.col-idle .col-header{background:var(--idle-bg);color:var(--idle-text);border:1px solid var(--idle-border);border-bottom:none}
+.col-freeze .col-header{background:var(--freeze-bg);color:var(--freeze-text);border:1px solid var(--freeze-border);border-bottom:none}
+.col-body{display:flex;flex-direction:column;flex:1}
+
+.card{background:var(--surface);border:1px solid var(--border);border-top:none;padding:10px 12px;cursor:pointer;transition:background .1s}
+.card:hover{background:var(--surface2)}
+.card.alert-noone{border-left:3px solid var(--alert-noone)}
+.card.alert-urgent{border-left:3px solid var(--alert-urgent)}
+.card-cliente{font-size:14px;font-weight:500;color:var(--text);line-height:1.2;margin-bottom:2px}
+.card-job{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);line-height:1.3;margin-bottom:5px}
+.card-designer{font-size:11px;line-height:1.3}
+.card-designer.noone{color:var(--alert-noone);font-weight:500}
+.card-designer.ok{color:var(--text-2)}
+.card-extra{font-size:11px;color:var(--text-3);margin-top:2px;font-style:italic}
+.card-datas{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+.card-data-row{display:flex;align-items:baseline;gap:4px}
+.card-data-icon{font-size:9px;color:var(--text-3);flex-shrink:0}
+.card-data-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-3);flex-shrink:0}
+.card-data-val{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--text-2)}
+.card-data-val.urgent{color:var(--alert-urgent)}
+.card-bottom{display:flex;justify-content:flex-start;margin-top:7px}
+.card-bu{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace}
+.bu-bianca{background:var(--bu-bianca-bg);color:var(--bu-bianca-text)}
+.bu-mari{background:var(--bu-mari-bg);color:var(--bu-mari-text)}
+.bu-paula{background:var(--bu-paula-bg);color:var(--bu-paula-text)}
+.bu-vanessa{background:var(--bu-vanessa-bg);color:var(--bu-vanessa-text)}
+.col-empty{background:var(--surface);border:1px solid var(--border);border-top:none;padding:16px 12px;font-size:12px;color:var(--text-3);font-family:'DM Mono',monospace;text-align:center}
+.btn-add-card{width:100%;padding:6px;font-size:11px;font-family:'DM Mono',monospace;border:none;border-top:1px dashed var(--border);background:transparent;color:var(--text-3);cursor:pointer;transition:all .1s;letter-spacing:.04em}
+.col-ativo .btn-add-card{border-top-color:var(--ativo-border)}
+.col-intense .btn-add-card{border-top-color:var(--intense-border)}
+.col-rush .btn-add-card{border-top-color:var(--rush-border)}
+.col-idle .btn-add-card{border-top-color:var(--idle-border)}
+.col-freeze .btn-add-card{border-top-color:var(--freeze-border)}
+.btn-add-card:hover{background:rgba(0,0,0,.04);color:var(--text-2)}
+
+/* CARD ACTIONS — duplicar */
+.card{position:relative}
+.card-actions{display:none;position:absolute;top:7px;right:8px;gap:3px}
+.card:hover .card-actions{display:flex}
+.card-action-btn{background:var(--surface2);border:0.5px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;color:var(--text-3);cursor:pointer;font-family:'DM Mono',monospace;line-height:1.6}
+.card-action-btn:hover{background:var(--border);color:var(--text-2)}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,24,22,.5);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:14px;font-weight:500;margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px}
+.field label span{font-style:normal;color:var(--alert-noone);margin-left:4px}
+.field label em{font-style:normal;color:var(--text-3);margin-left:4px;font-size:10px}
+.field-hint{font-size:11px;color:var(--text-3);margin-top:3px;font-family:'DM Mono',monospace}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-row-3{display:grid;grid-template-columns:1fr 1.6fr auto;gap:6px;align-items:end}
+.field-divider{height:1px;background:var(--border);margin:14px 0 12px}
+.field input,.field select{width:100%;padding:8px 10px;font-size:13px;font-family:'DM Sans',sans-serif;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--border-strong)}
+.prazo-wrap{display:flex;gap:6px;align-items:center}
+.prazo-wrap input{flex:1}
+.prazo-cal-btn{padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text-2);cursor:pointer;font-size:13px;flex-shrink:0;font-family:'DM Sans',sans-serif}
+.prazo-cal-btn:hover{border-color:var(--border-strong)}
+.prazo2-section{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px}
+.prazo2-section .field{margin-bottom:8px}
+.prazo2-section .field:last-child{margin-bottom:0}
+.prazo2-label-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-actions{display:flex;gap:8px;justify-content:space-between;margin-top:16px}
+.btn{padding:8px 18px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-2);transition:all .1s}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn.primary:hover{opacity:.85}
+.btn.danger{border-color:var(--alert-noone);color:var(--alert-noone)}
+.btn.danger:hover{background:#fff0ee}
+
+/* CONFIRM NOVA SEMANA */
+.confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;width:400px;max-width:95vw}
+.confirm-box h3{font-size:14px;font-weight:500;margin-bottom:8px}
+.confirm-box p{font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:16px}
+.confirm-box .confirm-semana{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);background:var(--surface2);padding:6px 10px;border-radius:6px;margin-bottom:16px}
+.confirm-actions{display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- CALENDAR OVERLAY -->
+<div class="cal-overlay" id="calOverlay">
+  <div class="cal-box">
+    <div class="cal-title-bar" id="calTitleBar"></div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calMes(-1)">‹</button>
+      <span class="cal-nav-title" id="calMonthTitle"></span>
+      <button class="cal-nav-btn" onclick="calMes(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-foot">
+      <button class="cal-clear" id="calClearBtn" onclick="calClear()">Limpar data</button>
+      <button onclick="closeCal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM NOVA SEMANA OVERLAY -->
+<div class="cal-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3>Nova semana</h3>
+    <p>Essa semana ainda não existe. Deseja criar copiando todos os jobs da semana anterior como ponto de partida?</p>
+    <div class="confirm-semana" id="confirmSemanaText"></div>
+    <div class="confirm-actions">
+      <button class="btn" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn primary" onclick="confirmarNovaSemana()">Criar e copiar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h3 id="editTitle">Editar job</h3>
+    <div class="field-row">
+      <div class="field"><label>Cliente</label><input type="text" id="f-cliente" placeholder="Nome do cliente"/></div>
+      <div class="field"><label>Job / entrega</label><input type="text" id="f-job" placeholder="O que está sendo feito"/></div>
+    </div>
+    <div class="field-divider"></div>
+    <div class="field">
+      <label>Designer responsável <span>*</span></label>
+      <input type="text" id="f-designer" placeholder="Nome do designer"/>
+      <div class="field-hint">↑ vazio = alerta "sem responsável"</div>
+    </div>
+    <div class="field">
+      <label>Time extra <em>(opcional)</em></label>
+      <input type="text" id="f-extra" placeholder="Negócios, estratégia, produto, freela…"/>
+      <div class="field-hint">↑ não aciona alerta</div>
+    </div>
+    <div class="field-divider"></div>
+    <div class="field">
+      <label>Próxima entrega</label>
+      <div class="prazo-wrap">
+        <input type="text" id="f-prazo" placeholder="DD/MM ou texto livre"/>
+        <button class="prazo-cal-btn" onclick="openPrazoCal('f-prazo','Próxima entrega')">📅</button>
+      </div>
+    </div>
+    <div class="prazo2-section">
+      <div class="prazo2-label-row">
+        <div class="field">
+          <label>Marco / subtarefa <em>(opcional)</em></label>
+          <input type="text" id="f-prazo2-label" placeholder="ex: v1, aprovação, entrega final…"/>
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <div class="prazo-wrap">
+            <input type="text" id="f-prazo2" placeholder="DD/MM"/>
+            <button class="prazo-cal-btn" onclick="openPrazoCal('f-prazo2','Data do marco')">📅</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Status</label>
+        <select id="f-col">
+          <option value="ativo">🟢 Ativo</option>
+          <option value="intense">⚡ Intense</option>
+          <option value="rush">🔥 Critical Rush</option>
+          <option value="idle">⏰ Idle Ready</option>
+          <option value="freeze">🧊 Freeze</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>BU / Gerente</label>
+        <select id="f-bu">
+          <option value="bu-bianca">Bianca</option>
+          <option value="bu-mari">Mari</option>
+          <option value="bu-paula">Paula</option>
+          <option value="bu-vanessa">Vanessa</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="btnDelete" onclick="deleteJob()">Remover job</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeEdit()">Cancelar</button>
+        <button class="btn primary" onclick="saveJob()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="header">
+  <div>
+    <div class="header-eyebrow">Tátil Design · BU Brasil</div>
+    <div class="header-title">Pauta <strong>semanal</strong></div>
+  </div>
+  <div class="header-actions">
+    <div class="save-indicator" id="saveIndicator">
+      <div class="save-dot" id="saveDot"></div>
+      <span id="saveText">carregando...</span>
+    </div>
+    <button class="btn-sm" onclick="openSemanaCal()">+ nova semana</button>
+    <button class="btn-sm primary" id="btnSalvar" onclick="salvarTudo(true)">↑ salvar agora</button>
+  </div>
+</div>
+
+<div class="semana-display">
+  <span class="semana-label-big" id="semanaLabelBig">—</span>
+  <button class="btn-cal" onclick="openSemanaCal()">trocar semana</button>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">jobs ativos</div></div>
+  <div class="stat"><div class="stat-n" id="s-rush" style="color:var(--rush-text)">—</div><div class="stat-l">critical rush</div></div>
+  <div class="stat"><div class="stat-n" id="s-noone" style="color:var(--alert-noone)">—</div><div class="stat-l">sem responsável</div></div>
+  <div class="stat"><div class="stat-n" id="s-freeze" style="color:var(--freeze-text)">—</div><div class="stat-l">freeze + idle</div></div>
+</div>
+
+<div class="semana-bar" id="semanaPills"><span class="semana-bar-label">histórico:</span></div>
+
+<div class="filter-bar">
+  <span class="filter-label">ver por:</span>
+  <button class="fbtn active" data-filter="all">Todos</button>
+  <button class="fbtn" data-filter="bu-bianca">Bianca</button>
+  <button class="fbtn" data-filter="bu-mari">Mari</button>
+  <button class="fbtn" data-filter="bu-paula">Paula</button>
+  <button class="fbtn" data-filter="bu-vanessa">Vanessa</button>
+  <button class="fbtn" data-filter="alert-noone">Sem responsável</button>
+  <span style="margin-left:8px;color:var(--border);font-size:12px">|</span>
+  <span class="filter-label" style="margin-left:8px">ordem:</span>
+  <button class="fbtn active" id="sort-cliente" data-sort="cliente" onclick="setSort('cliente')">A–Z cliente</button>
+  <button class="fbtn" id="sort-manual" data-sort="manual" onclick="setSort('manual')">manual</button>
+</div>
+
+<div class="legend">
+  <div class="leg"><div class="leg-line" style="background:var(--alert-noone)"></div>sem designer</div>
+  <div class="leg"><div class="leg-line" style="background:var(--alert-urgent)"></div>prazo urgente</div>
+</div>
+
+<div class="board-wrap">
+  <div class="board-add-bar">
+    <button class="board-add-btn" onclick="newJob('ativo')">+ job ativo</button>
+    <button class="board-add-btn" onclick="newJob('intense')">+ job intense</button>
+    <button class="board-add-btn" onclick="newJob('rush')">+ job critical rush</button>
+    <button class="board-add-btn" onclick="newJob('idle')">+ job idle ready</button>
+    <button class="board-add-btn" onclick="newJob('freeze')">+ job freeze</button>
+  </div>
+  <div class="board">
+    <div class="col col-ativo">
+      <div class="col-header"><span class="col-emoji">🟢</span><div class="col-header-label">Ativo</div><div class="col-header-sub">Produção real</div></div>
+      <div class="col-body" id="col-ativo"></div>
+    </div>
+    <div class="col col-intense">
+      <div class="col-header"><span class="col-emoji">⚡</span><div class="col-header-label">Intense</div><div class="col-header-sub">Retomada c/ pressão</div></div>
+      <div class="col-body" id="col-intense"></div>
+    </div>
+    <div class="col col-rush">
+      <div class="col-header"><span class="col-emoji">🔥</span><div class="col-header-label">Critical Rush</div><div class="col-header-sub">Curto prazo, alta int.</div></div>
+      <div class="col-body" id="col-rush"></div>
+    </div>
+    <div class="col col-idle">
+      <div class="col-header"><span class="col-emoji">⏰</span><div class="col-header-label">Idle Ready</div><div class="col-header-sub">Preparado, aguardando</div></div>
+      <div class="col-body" id="col-idle"></div>
+    </div>
+    <div class="col col-freeze">
+      <div class="col-header"><span class="col-emoji">🧊</span><div class="col-header-label">Freeze</div><div class="col-header-sub">Pausa formal cliente</div></div>
+      <div class="col-body" id="col-freeze"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://vxfsbgcjitkjlxplbqhf.supabase.co';
+const SUPABASE_KEY='sb_publishable_OTg7kaYjcTPczXrb8v6Uxg_1DvEMhQ3';
+const API=`${SUPABASE_URL}/rest/v1/jobs`;
+const hdrs={'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'};
+
+// ── ESTADO GLOBAL ─────────────────────────────────────
+let jobs=[],editingId=null,activeFilter='all',semanaAtual=null,todasSemanas=[];
+let pendingNovaSemana=null,sortMode='cliente';
+let hasUnsaved=false,autoSaveTimer=null,isSaving=false;
+
+// ── AUTOSAVE ──────────────────────────────────────────
+function setSaveStatus(status,msg){
+  const ind=document.getElementById('saveIndicator');
+  const dot=document.getElementById('saveDot');
+  const txt=document.getElementById('saveText');
+  if(!ind||!dot||!txt)return;
+  ind.className='save-indicator '+status;
+  dot.className='save-dot'+(status==='saving'?' pulse':'');
+  txt.textContent=msg;
+}
+
+function markUnsaved(){
+  if(isSaving||!semanaAtual)return;
+  hasUnsaved=true;
+  const now=new Date();
+  setSaveStatus('unsaved',`não salvo · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>salvarTudo(false),3000);
+}
+
+window.addEventListener('beforeunload',e=>{
+  if(hasUnsaved){e.preventDefault();e.returnValue='Há alterações não salvas.';return e.returnValue;}
+});
+
+function setSemana(s){
+  semanaAtual=s;
+  document.getElementById('semanaLabelBig').innerHTML=s?`<strong>${s}</strong>`:'<span style="color:var(--text-3)">escolha uma semana</span>';
+}
+
+function setSort(mode){
+  sortMode=mode;
+  document.querySelectorAll('.fbtn[data-sort]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sort-'+mode).classList.add('active');
+  render();
+}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function pad(n){return String(n).padStart(2,'0')}
+function toast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show'+(type==='error'?' error':'');
+  clearTimeout(el._t);el._t=setTimeout(()=>{el.className='toast'},3000);
+}
+function parseAlert(j){
+  if(!j.designer||j.designer.trim()===''||j.designer.trim()==='?') return 'alert-noone';
+  const urgentes=['17/04','22/04','23/04','24/04','27/04','29/04','30/04'];
+  const ps=(j.prazo||'')+(j.prazo2||'');
+  if(urgentes.some(d=>ps.includes(d))) return 'alert-urgent';
+  return '';
+}
+function semanaStr(seg){
+  const sex=new Date(seg);sex.setDate(sex.getDate()+4);
+  return `Semana ${pad(seg.getDate())}/${pad(seg.getMonth()+1)} a ${pad(sex.getDate())}/${pad(sex.getMonth()+1)}`;
+}
+function fmtDate(d){return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`}
+const URGENTES=['17/04','22/04','23/04','24/04','27/04','29/04','30/04'];
+function isUrgent(v){return URGENTES.some(d=>(v||'').includes(d))}
+
+// ── CALENDÁRIO ────────────────────────────────────────
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_H=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+let calMode='semana',calTargetField=null,calDate=new Date();
+
+function openSemanaCal(){
+  calMode='semana';calTargetField=null;
+  document.getElementById('calTitleBar').textContent='Escolha a segunda-feira da semana';
+  document.getElementById('calClearBtn').style.display='none';
+  calDate=new Date();renderCal();
+  document.getElementById('calOverlay').classList.add('open');
+}
+function openPrazoCal(fieldId,label){
+  calMode='prazo';calTargetField=fieldId;
+  document.getElementById('calTitleBar').textContent=label;
+  document.getElementById('calClearBtn').style.display='block';
+  calDate=new Date();renderCal();
+  document.getElementById('calOverlay').classList.add('open');
+}
+function closeCal(){document.getElementById('calOverlay').classList.remove('open')}
+function calMes(d){calDate.setMonth(calDate.getMonth()+d);renderCal()}
+function calClear(){if(calTargetField)document.getElementById(calTargetField).value='';closeCal()}
+
+function renderCal(){
+  document.getElementById('calMonthTitle').textContent=`${MESES[calDate.getMonth()]} ${calDate.getFullYear()}`;
+  const grid=document.getElementById('calGrid');grid.innerHTML='';
+  const hoje=new Date();
+  DIAS_H.forEach(d=>{const h=document.createElement('div');h.className='cal-day-head';h.textContent=d;grid.appendChild(h)});
+  const ano=calDate.getFullYear(),mes=calDate.getMonth();
+  const primeiroDia=new Date(ano,mes,1).getDay();
+  const diasNoMes=new Date(ano,mes+1,0).getDate();
+  for(let i=0;i<primeiroDia;i++){const c=document.createElement('div');c.className='cal-day other-month';grid.appendChild(c)}
+  for(let d=1;d<=diasNoMes;d++){
+    const dt=new Date(ano,mes,d);
+    const dow=dt.getDay();
+    const isToday=dt.toDateString()===hoje.toDateString();
+    const isSelectable=calMode==='semana'?(dow===1):true;
+    const cell=document.createElement('div');
+    cell.className='cal-day'+(isSelectable?' selectable':'')+(isToday?' today-mark':'');
+    cell.textContent=d;
+    if(isSelectable){
+      if(calMode==='semana'){
+        const ss=semanaStr(dt);
+        if(ss===semanaAtual)cell.classList.add('selected');
+        cell.onclick=()=>{ closeCal(); handleSemanaChoice(ss); };
+      }else{
+        const val=fmtDate(dt);
+        const curVal=document.getElementById(calTargetField)?.value;
+        if(curVal===val)cell.classList.add('selected');
+        cell.onclick=()=>{document.getElementById(calTargetField).value=val;closeCal()};
+      }
+    }
+    grid.appendChild(cell);
+  }
+}
+
+// ── LÓGICA NOVA SEMANA ────────────────────────────────
+async function handleSemanaChoice(ss){
+  console.log('[handleSemanaChoice] ss=',ss,'semanaAtual=',semanaAtual,'existe no banco=',todasSemanas.includes(ss));
+  if(ss===semanaAtual){
+    toast('Essa já é a semana ativa');
+    return;
+  }
+
+  const exists=todasSemanas.includes(ss);
+  if(exists){
+    // Semana já existe — carrega direto
+    setSemana(ss);
+    renderPills(todasSemanas);
+    await carregarJobs(ss);
+  } else {
+    // Semana nova — pergunta se copia da anterior
+    pendingNovaSemana=ss;
+    document.getElementById('confirmSemanaText').textContent=ss;
+    document.getElementById('confirmOverlay').classList.add('open');
+  }
+}
+
+function closeConfirm(){document.getElementById('confirmOverlay').classList.remove('open');pendingNovaSemana=null}
+
+async function confirmarNovaSemana(){
+  if(!pendingNovaSemana) return;
+  const nova=pendingNovaSemana;  // Captura ANTES de fechar (closeConfirm zera pendingNovaSemana)
+  closeConfirm();
+
+  // Pega jobs da semana mais recente como base
+  let base=[];
+  if(todasSemanas.length>0){
+    try{
+      const res=await fetch(`${API}?semana=eq.${encodeURIComponent(todasSemanas[0])}&order=col.asc`,{headers:hdrs});
+      base=await res.json();
+    }catch(e){}
+  }
+
+  // Copia com IDs novos e semana nova
+  jobs=base.map(j=>({...j,id:uid(),semana:nova,prazo2:'',prazo2_label:''}));
+  setSemana(nova);
+  // Adiciona nova semana à lista e atualiza pills imediatamente
+  if(!todasSemanas.includes(nova)){
+    todasSemanas=[nova,...todasSemanas];
+  }
+  renderPills(todasSemanas);
+  console.log('[confirmarNovaSemana] nova=',nova,'jobs criados=',jobs.length);
+  render();
+  markUnsaved();
+  toast(`Semana criada com ${jobs.length} jobs — salvamento automático em 3s`);
+}
+
+// ── SUPABASE ──────────────────────────────────────────
+async function carregarSemanas(){
+  try{
+    const res=await fetch(`${API}?select=semana&order=semana.desc`,{headers:hdrs});
+    const data=await res.json();
+    todasSemanas=[...new Set(data.map(r=>r.semana).filter(Boolean))];
+    
+    // Define semanaAtual ANTES de renderizar as pills, senão nenhuma fica ativa
+    if(!semanaAtual){
+      if(todasSemanas.length>0){
+        setSemana(todasSemanas[0]);
+        renderPills(todasSemanas);
+        await carregarJobs(todasSemanas[0]);
+      }else{
+        jobs=defaultJobs();
+        setSemana('Semana 22/04 a 24/04');
+        renderPills(todasSemanas);
+        render();
+        setSaveStatus('unsaved','dados de exemplo — salve para persistir');
+      }
+    }else{
+      renderPills(todasSemanas);
+    }
+    console.log('[carregarSemanas] final. semanaAtual=',semanaAtual,'todasSemanas=',todasSemanas);
+  }catch(e){
+    console.error('[carregarSemanas] erro:',e);
+    toast('Erro ao conectar','error');
+    jobs=defaultJobs();
+    setSemana('Semana 22/04 a 24/04');
+    render();
+  }
+}
+
+async function carregarJobs(semana){
+  setSaveStatus('saving','carregando...');
+  try{
+    const res=await fetch(`${API}?semana=eq.${encodeURIComponent(semana)}&order=col.asc`,{headers:hdrs});
+    jobs=await res.json();render();
+    hasUnsaved=false;
+    const now=new Date();
+    setSaveStatus('saved',`carregado · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  }catch(e){toast('Erro ao carregar','error');setSaveStatus('error','erro ao carregar')}
+}
+
+const CAMPOS_SALVAR=['id','semana','cliente','job','designer','time_extra','prazo','prazo2','prazo2_label','col','bu'];
+function limparJob(j){
+  const o={};
+  CAMPOS_SALVAR.forEach(k=>{
+    const v=j[k];
+    // id, semana, col, bu são obrigatórios — envia como string
+    if(k==='id'||k==='semana'||k==='col'||k==='bu'){
+      o[k]=v||'';
+    }else{
+      // resto: strings vazias viram null para o banco aceitar
+      o[k]=(v===undefined||v===null||v==='')?null:v;
+    }
+  });
+  return o;
+}
+
+async function salvarTudo(manual=false){
+  // Auto-recovery: se semanaAtual for null mas temos jobs, tenta recuperar da pill ativa ou do primeiro job
+  if(!semanaAtual){
+    const ativa=document.querySelector('.semana-pill.active');
+    if(ativa){
+      semanaAtual=ativa.textContent.trim();
+      console.warn('[salvarTudo] recuperou semana da pill ativa:',semanaAtual);
+    }else if(jobs.length>0&&jobs[0].semana){
+      semanaAtual=jobs[0].semana;
+      console.warn('[salvarTudo] recuperou semana do primeiro job:',semanaAtual);
+    }
+    if(semanaAtual){
+      document.getElementById('semanaLabelBig').innerHTML=`<strong>${semanaAtual}</strong>`;
+    }
+  }
+  
+  console.log('[salvarTudo] manual=',manual,'semanaAtual=',semanaAtual,'jobs=',jobs.length);
+  if(!semanaAtual){
+    if(manual)toast('Nenhuma semana ativa — escolha uma no calendário','error');
+    return;
+  }
+  if(isSaving)return;
+  isSaving=true;
+  clearTimeout(autoSaveTimer);
+  const btn=document.getElementById('btnSalvar');
+  btn.disabled=true;
+  setSaveStatus('saving','salvando...');
+  jobs.forEach(j=>j.semana=semanaAtual);
+  try{
+    await fetch(`${API}?semana=eq.${encodeURIComponent(semanaAtual)}`,{method:'DELETE',headers:hdrs});
+    if(jobs.length>0){
+      const payload=jobs.map(j=>limparJob({...j,semana:semanaAtual}));
+      console.log('[salvarTudo] enviando payload:',payload[0]);
+      const res=await fetch(API,{method:'POST',headers:hdrs,body:JSON.stringify(payload)});
+      if(!res.ok){
+        const errText=await res.text();
+        console.error('[salvarTudo] erro do Supabase:',errText);
+        throw new Error(errText);
+      }
+    }
+    hasUnsaved=false;
+    const now=new Date();
+    setSaveStatus('saved',`salvo às ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+    if(manual)toast('Salvo ✓');
+    if(!todasSemanas.includes(semanaAtual)){
+      todasSemanas=[semanaAtual,...todasSemanas];
+    }
+    renderPills(todasSemanas);
+  }catch(e){
+    setSaveStatus('error','erro ao salvar — tente agora');
+    toast('Erro: '+e.message,'error');
+  }finally{
+    isSaving=false;
+    btn.disabled=false;
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────
+function renderPills(semanas){
+  const bar=document.getElementById('semanaPills');
+  bar.innerHTML='<span class="semana-bar-label">histórico:</span>';
+  semanas.slice(0,10).forEach(s=>{
+    const btn=document.createElement('button');
+    btn.className='semana-pill'+(s===semanaAtual?' active':'');
+    btn.textContent=s;
+    btn.onclick=()=>{
+      setSemana(s);
+      document.querySelectorAll('.semana-pill').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');carregarJobs(s);
+    };
+    bar.appendChild(btn);
+  });
+}
+
+function render(){
+  ['ativo','intense','rush','idle','freeze'].forEach(col=>{
+    const el=document.getElementById('col-'+col);el.innerHTML='';
+    let filtered=jobs.filter(j=>j.col===col&&matchFilter(j));
+    if(sortMode==='cliente'){
+      filtered=[...filtered].sort((a,b)=>{
+        const c=(a.cliente||'').localeCompare(b.cliente||'','pt-BR');
+        return c!==0?c:(a.job||'').localeCompare(b.job||'','pt-BR');
+      });
+    }
+    if(filtered.length===0){
+      const e=document.createElement('div');e.className='col-empty';e.textContent='—';el.appendChild(e);
+    }else{filtered.forEach(j=>el.appendChild(buildCard(j)))}
+  });
+  updateStats();
+}
+
+function matchFilter(j){
+  if(activeFilter==='all')return true;
+  if(activeFilter==='alert-noone')return parseAlert(j)==='alert-noone';
+  return j.bu===activeFilter;
+}
+
+function updateStats(){
+  document.getElementById('s-total').textContent=jobs.filter(j=>!['freeze','idle'].includes(j.col)).length;
+  document.getElementById('s-rush').textContent=jobs.filter(j=>j.col==='rush').length;
+  document.getElementById('s-noone').textContent=jobs.filter(j=>parseAlert(j)==='alert-noone').length;
+  document.getElementById('s-freeze').textContent=jobs.filter(j=>['freeze','idle'].includes(j.col)).length;
+}
+
+function buildCard(j){
+  const alert=parseAlert(j);
+  const div=document.createElement('div');
+  div.className='card '+alert;
+  const semDes=!j.designer||j.designer.trim()===''||j.designer.trim()==='?';
+
+  let datasHtml='';
+  if(j.prazo||j.prazo2){
+    datasHtml='<div class="card-datas">';
+    if(j.prazo){
+      datasHtml+=`<div class="card-data-row">
+        <span class="card-data-icon">→</span>
+        <span class="card-data-label">entrega</span>
+        <span class="card-data-val ${isUrgent(j.prazo)?'urgent':''}">${j.prazo}</span>
+      </div>`;
+    }
+    if(j.prazo2){
+      const lbl=j.prazo2_label||'marco';
+      datasHtml+=`<div class="card-data-row">
+        <span class="card-data-icon">◇</span>
+        <span class="card-data-label">${lbl}</span>
+        <span class="card-data-val ${isUrgent(j.prazo2)?'urgent':''}">${j.prazo2}</span>
+      </div>`;
+    }
+    datasHtml+='</div>';
+  }
+
+  div.innerHTML=`
+    <div class="card-actions">
+      <button class="card-action-btn" title="Duplicar job" onclick="event.stopPropagation();duplicateJob('${j.id}')">⧉</button>
+    </div>
+    <div class="card-cliente">${j.cliente||'—'}</div>
+    <div class="card-job">${j.job||'—'}</div>
+    <div class="card-designer ${semDes?'noone':'ok'}">${semDes?'sem designer':j.designer}</div>
+    ${j.time_extra?`<div class="card-extra">+ ${j.time_extra}</div>`:''}
+    ${datasHtml}
+    <div class="card-bottom">
+      <span class="card-bu ${j.bu}">${(j.bu||'').replace('bu-','')}</span>
+    </div>`;
+  div.addEventListener('click',()=>openEdit(j.id));
+  return div;
+}
+
+function duplicateJob(id){
+  const j=jobs.find(x=>x.id===id);
+  if(!j) return;
+  const copy={...j,id:uid(),job:(j.job?j.job+' (cópia)':j.job)};
+  // insere logo após o original
+  const idx=jobs.findIndex(x=>x.id===id);
+  jobs.splice(idx+1,0,copy);
+  render();markUnsaved();
+  toast('Job duplicado — clique para editar');
+}
+
+document.querySelectorAll('.fbtn[data-filter]').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.fbtn[data-filter]').forEach(b=>b.classList.remove('active','alert-active'));
+    activeFilter=this.dataset.filter;
+    if(activeFilter==='alert-noone')this.classList.add('alert-active');
+    else this.classList.add('active');
+    render();
+  });
+});
+
+// ── MODAL ─────────────────────────────────────────────
+function openEdit(id){
+  editingId=id;
+  const j=jobs.find(x=>x.id===id);if(!j)return;
+  document.getElementById('editTitle').textContent='Editar — '+(j.cliente||'job');
+  document.getElementById('f-cliente').value=j.cliente||'';
+  document.getElementById('f-job').value=j.job||'';
+  document.getElementById('f-designer').value=j.designer||'';
+  document.getElementById('f-extra').value=j.time_extra||'';
+  document.getElementById('f-prazo').value=j.prazo||'';
+  document.getElementById('f-prazo2').value=j.prazo2||'';
+  document.getElementById('f-prazo2-label').value=j.prazo2_label||'';
+  document.getElementById('f-col').value=j.col||'ativo';
+  document.getElementById('f-bu').value=j.bu||'bu-bianca';
+  document.getElementById('btnDelete').style.display='block';
+  document.getElementById('editOverlay').classList.add('open');
+}
+
+function newJob(col){
+  editingId=null;
+  document.getElementById('editTitle').textContent='Novo job';
+  ['f-cliente','f-job','f-designer','f-extra','f-prazo','f-prazo2','f-prazo2-label'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-col').value=col;
+  document.getElementById('f-bu').value='bu-bianca';
+  document.getElementById('btnDelete').style.display='none';
+  document.getElementById('editOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-cliente').focus(),80);
+}
+
+function closeEdit(){document.getElementById('editOverlay').classList.remove('open');editingId=null}
+
+function saveJob(){
+  const data={
+    cliente:document.getElementById('f-cliente').value.trim(),
+    job:document.getElementById('f-job').value.trim(),
+    designer:document.getElementById('f-designer').value.trim(),
+    time_extra:document.getElementById('f-extra').value.trim(),
+    prazo:document.getElementById('f-prazo').value.trim(),
+    prazo2:document.getElementById('f-prazo2').value.trim(),
+    prazo2_label:document.getElementById('f-prazo2-label').value.trim(),
+    col:document.getElementById('f-col').value,
+    bu:document.getElementById('f-bu').value,
+    semana:semanaAtual,
+  };
+  if(!data.cliente&&!data.job){closeEdit();return}
+  if(editingId){
+    const idx=jobs.findIndex(x=>x.id===editingId);
+    if(idx!==-1)jobs[idx]={...jobs[idx],...data};
+  }else{jobs.push({id:uid(),...data})}
+  closeEdit();render();markUnsaved();
+}
+
+function deleteJob(){
+  if(!editingId)return;
+  jobs=jobs.filter(x=>x.id!==editingId);
+  closeEdit();render();markUnsaved();
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEdit();closeCal();closeConfirm()}});
+
+// ── DEFAULT DATA ──────────────────────────────────────
+function defaultJobs(){
+  const s='Semana 22/04 a 24/04';
+  const j=(c,jb,d,te,p,p2,p2l,col,bu)=>({id:uid(),semana:s,cliente:c,job:jb,designer:d,time_extra:te,prazo:p,prazo2:p2,prazo2_label:p2l,col,bu});
+  return [
+    j("Caixa","Caixinhas","Carleto + Ted","","06/04","","","ativo","bu-vanessa"),
+    j("Caixa","Caixa Cultural","Carleto + Dan","","09/04","","","ativo","bu-vanessa"),
+    j("Tigre","Design Language","Marcelo + Adson","","—","","","ativo","bu-bianca"),
+    j("Tigre","Book Embalagem","","","Começa 14/04","","","ativo","bu-bianca"),
+    j("B3","Fee","Marcelo + Tina","","Contínuo","","","ativo","bu-bianca"),
+    j("Trillia","Fee","Luk + Tina","","Contínuo","","","ativo","bu-bianca"),
+    j("Arco","Branding","Ro + Marcela + Tina","","wk 28-29/04","","","ativo","bu-bianca"),
+    j("Natura","Ory Shape","Hud + Paulo","","27/04","04/05","aprovação","ativo","bu-paula"),
+    j("Natura","Ekos Guaraci","Hud + Dan","","15/04","","","ativo","bu-paula"),
+    j("Sicredi","Branding","Alex","","23/04","","","ativo","bu-mari"),
+    j("RD Bwell","Embalagem","Lê","","Ag. feedback","","","ativo","bu-mari"),
+    j("Sesc","Branding + Sinalização","Fernando + Lívia","","—","","","ativo","bu-mari"),
+    j("AXIA","Sinalização","Luk + Valentina","Produto","27/04","","","ativo","bu-mari"),
+    j("Pinheiro Neto","V2 Expressões","Hud + Filipi + Adson","","17/04","","","intense","bu-paula"),
+    j("Caixa","Marca mãe — lançamento","Carleto + João G.","Samuel","27/04","Junho","lançamento","rush","bu-vanessa"),
+    j("Tim","Linguagem institucional","Illy + Clauber","","14/06","","","rush","bu-vanessa"),
+    j("Caixa","Brand Moves","","Time Estratégia","27/04","","","rush","bu-vanessa"),
+    j("Accor","Branding — diagnóstico","Hud + Alex","","27/04","04/05","v1","rush","bu-mari"),
+    j("White Martins","Apresentação Linde","Ro + Henrique","","29/04","","","rush","bu-bianca"),
+    j("Caixa Seguridade","Branding","","","—","","","idle","bu-vanessa"),
+    j("Matrix Energia","Branding + Arq.","","","wkp 20/05","","","idle","bu-bianca"),
+    j("Natura","Ekos Corpo/Make","Hud","","24/04","","","idle","bu-paula"),
+    j("EMS","Branding","Shay","","17/04","","","idle","bu-paula"),
+    j("BET MGM","Linguagem","Alex / Shay","","23/04","","","idle","bu-paula"),
+    j("iBiti","Branding — estratégia","Fernando + Rafa","","19/05","","","idle","bu-paula"),
+    j("Senac","Branding + Sinalização","Sat + Carol","","27/04","","","idle","bu-mari"),
+    j("White Martins","Branding","Adson","","—","","","freeze","bu-bianca"),
+    j("Natura","Aracá","","","—","","","freeze","bu-paula"),
+    j("Natura","Arua — Embalagem","","","2026","","","freeze","bu-paula"),
+    j("Natura","Ory Multipack","","","Ag. feedback","","","freeze","bu-paula"),
+    j("RD Saúde Empresas","Branding rollout","","","2 semanas","","","freeze","bu-mari"),
+    j("Exitlag","Branding","Ted","","Ag. feedback","","","freeze","bu-mari"),
+    j("RD Needs","Rollout","Lê + Namie","","Ag. feedback","","","freeze","bu-mari"),
+    j("Tim","Linguagem pré","Equipe Tim","","Ag. feedback","","","freeze","bu-vanessa"),
+    j("Tim","Ling. Loja Conceito","Equipe Tim","","Ag. feedback","","","freeze","bu-vanessa"),
+  ];
+}
+
+carregarSemanas();
+</script>
+</body>
+</html>
